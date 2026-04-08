@@ -30,7 +30,7 @@ function useBackend() {
 
   const checkHealth = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/`, { signal: AbortSignal.timeout(2000) });
+      const r = await fetch(`${API}/`, { signal: AbortSignal.timeout(5000) });
       setOnline(r.ok);
     } catch { setOnline(false); }
   }, []);
@@ -628,7 +628,7 @@ export function GlobalDashboard({ onClose }: { onClose: () => void }) {
           <div className="flex items-center gap-4">
             <Network className={`w-8 h-8 ${chaosEvent ? 'text-red-500' : 'text-neon-blue'}`} />
             <div>
-              <h1 className={`text-2xl font-black tracking-widest uppercase ${chaosEvent ? 'text-red-500' : 'text-transparent bg-clip-text bg-gradient-to-r from-white to-neon-blue'}`}>
+              <h1 className={`text-4xl md:text-5xl font-black tracking-widest uppercase ${chaosEvent ? 'text-red-500' : 'text-transparent bg-clip-text bg-gradient-to-r from-white to-neon-blue'}`}>
                 Antariksh
               </h1>
               <p className={`text-[10px] tracking-[0.3em] font-mono uppercase ${chaosEvent ? 'text-red-400' : 'text-blue-300'}`}>Orbital Intelligence System</p>
@@ -1136,19 +1136,40 @@ export function GlobalDashboard({ onClose }: { onClose: () => void }) {
                   <div className="flex-1 relative overflow-hidden">
                     <LeafletMap
                       satellites={realData.satellites}
-                      disasters={realData.disasters}
+                      disasters={
+                        disasterMode && simulatedSector
+                          ? [
+                              ...realData.disasters,
+                              {
+                                id: 'sim-disaster',
+                                title: `SIMULATED DISASTER: SECTOR ${simulatedSector.name}`,
+                                category: 'simulation',
+                                weather_type: 'storm',
+                                lat: SECTOR_COORDS[simulatedSector.name] ? SECTOR_COORDS[simulatedSector.name][0] : 0,
+                                lon: SECTOR_COORDS[simulatedSector.name] ? SECTOR_COORDS[simulatedSector.name][1] : 0,
+                                date: '',
+                                link: ''
+                              }
+                            ]
+                          : realData.disasters
+                      }
                       disasterMode={disasterMode}
                     />
                   </div>
 
                   {/* Bottom ticker */}
                   <div className="flex-shrink-0 flex gap-6 px-8 py-3 border-t border-white/10 bg-black/30 overflow-x-auto scrollbar-hide">
+                    {disasterMode && simulatedSector && (
+                      <span key="sim-disaster" className="text-xs font-mono whitespace-nowrap font-bold tracking-widest text-red-400 animate-pulse">
+                        ⚠ SIMULATED DISASTER ACTIVE — SECTOR {simulatedSector.name}
+                      </span>
+                    )}
                     {realData.disasters.map((d) => (
                       <span key={d.id} className="text-xs font-mono whitespace-nowrap font-bold tracking-widest text-red-400 animate-pulse">
                         ⚠ {d.title.toUpperCase()} (NASAEONET: {d.category})
                       </span>
                     ))}
-                    {realData.disasters.length === 0 && (
+                    {!disasterMode && realData.disasters.length === 0 && (
                       <span className="text-xs font-mono whitespace-nowrap font-bold tracking-widest text-neon-blue/70">
                         ✓ ALL SECTORS NOMINAL — NO ACTIVE DISASTERS REPORTED
                       </span>
