@@ -396,7 +396,15 @@ async def live_weather():
 if os.path.exists("static"):
     # Mount everything else to the React frontend
     app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
+else:
+    @app.get("/")
+    def root_fallback():
+        return {
+            "name": "Satellite Scheduling RL Environment",
+            "version": "1.0.0",
+            "status": "online (Frontend running separately via npm run dev)",
+            "endpoints": ["/api/health", "/reset", "/step", "/state", "/grade", "/sessions", "/demo"]
+        }
 
 # ── Server Startup ──────────────────────────────────────────────────────────
 if __name__ == "__main__":
