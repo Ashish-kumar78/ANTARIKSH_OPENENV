@@ -115,10 +115,10 @@ def run_task(difficulty: str, seed: int = 42) -> dict:
     obs = env.reset()
 
     print(json.dumps({
-        "event": "START",
-        "task_id": difficulty,
-        "model_name": MODEL_NAME,
-        "seed": seed,
+        "event": "[START]",
+        "task": difficulty,
+        "model": MODEL_NAME,
+        "seed": seed
     }), flush=True)
 
     done = False
@@ -132,11 +132,10 @@ def run_task(difficulty: str, seed: int = 42) -> dict:
         step_num += 1
 
         print(json.dumps({
-            "event": "STEP",
+            "event": "[STEP]",
             "step": step_num,
             "action": action,
-            "reward": round(reward, 4),
-            "done": done,
+            "reward": round(reward, 4)
         }), flush=True)
 
     final_state = env.get_state()
@@ -144,10 +143,10 @@ def run_task(difficulty: str, seed: int = 42) -> dict:
     score = result["score"]
 
     print(json.dumps({
-        "event": "END",
-        "task_id": difficulty,
+        "event": "[END]",
+        "task": difficulty,
         "score": round(score, 4),
-        "steps": step_num,
+        "steps": step_num
     }), flush=True)
 
     return {"difficulty": difficulty, "score": score, "steps": step_num, "total_reward": round(total_reward, 4)}
