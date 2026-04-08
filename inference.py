@@ -18,10 +18,18 @@ import sys
 import json
 import time
 
+# ── Auto-load .env file ───────────────────────────────────────────────────────
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+except ImportError:
+    pass  # dotenv optional; vars can also be set manually in shell
+
 # ── Validate required env vars ────────────────────────────────────────────────
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME   = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
 HF_TOKEN     = os.environ.get("HF_TOKEN") or os.environ.get("OPENAI_API_KEY")
+
 
 if not HF_TOKEN:
     print("[ERROR] HF_TOKEN (or OPENAI_API_KEY) environment variable is not set.", flush=True)
