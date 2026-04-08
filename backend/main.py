@@ -49,7 +49,7 @@ class ActionRequest(BaseModel):
     action: Dict[str, Any]
 
 
-@app.get("/")
+@app.get("/api/health")
 def root():
     return {
         "name": "Satellite Scheduling RL Environment",

@@ -30,7 +30,7 @@ function useBackend() {
 
   const checkHealth = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/`, { signal: AbortSignal.timeout(5000) });
+      const r = await fetch(`${API}/api/health`, { signal: AbortSignal.timeout(5000) });
       setOnline(r.ok);
     } catch { setOnline(false); }
   }, []);
