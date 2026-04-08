@@ -19,7 +19,7 @@ dependencies = [
 requires-python = ">=3.10"
 
 [project.scripts]
-start = "server.app:app"
+start = "server.app:main"
 
 [tool.setuptools]
 packages = ["server"]

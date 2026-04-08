@@ -34,3 +34,10 @@ async def step(data: Optional[Dict[str, Any]] = Body(None)):
 @app.get("/api/health")
 async def health():
     return {"status": "online"}
+
+def main():
+    import uvicorn
+    uvicorn.run("server.app:app", host="0.0.0.0", port=8000)
+
+if __name__ == "__main__":
+    main()
