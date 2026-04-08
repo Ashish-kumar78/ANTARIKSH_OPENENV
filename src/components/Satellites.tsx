@@ -93,16 +93,49 @@ export function Satellites({ selectedSatellite, setSelectedSatellite, onSatellit
   
   const [satelliteData, setSatelliteData] = React.useState<any[]>([]);
   const positionsRef = useRef<THREE.Vector3[]>([]);
+  
+  // Get backend URL from environment or use default
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
-  // Fetch real-world data payload from API equivalent
+  // Fetch real satellite data from backend API with auto-refresh
   React.useEffect(() => {
-    fetch('/satellites.json')
-      .then(res => res.json())
-      .then(data => {
-        setSatelliteData(data);
-        positionsRef.current = data.map(() => new THREE.Vector3());
-      })
-      .catch(console.error);
+    const fetchRealData = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/real-satellites`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        
+        // Handle both array format (mock) and object format (real API)
+        const satellites = Array.isArray(data) ? data : (data.satellites || []);
+        setSatelliteData(satellites);
+        positionsRef.current = satellites.map(() => new THREE.Vector3());
+      } catch (error) {
+        console.warn('Failed to fetch real satellites, falling back to mock data:', error);
+        // Fallback to mock data
+        try {
+          const mockResponse = await fetch('/satellites.json');
+          if (!mockResponse.ok) {
+            throw new Error('Mock data not available');
+          }
+          const mockData = await mockResponse.json();
+          setSatelliteData(mockData);
+          positionsRef.current = mockData.map(() => new THREE.Vector3());
+        } catch (mockError) {
+          console.error('Failed to load both real and mock data:', mockError);
+          setSatelliteData([]);
+        }
+      }
+    };
+    
+    // Initial fetch
+    fetchRealData();
+    
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(fetchRealData, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Compute organic mesh networking

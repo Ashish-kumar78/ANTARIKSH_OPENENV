@@ -30,9 +30,15 @@ if not OPENAI_API_KEY:
 
 try:
     from openai import OpenAI
-    client = OpenAI()
+    api_key = OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("No API key found in OPENAI_API_KEY environment variable")
+    client = OpenAI(api_key=api_key)
 except ImportError:
     print("ERROR: openai package not installed. Run: pip install openai")
+    sys.exit(1)
+except ValueError as e:
+    print(f"ERROR: {e}")
     sys.exit(1)
 
 

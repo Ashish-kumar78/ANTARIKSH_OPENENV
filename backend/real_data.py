@@ -84,7 +84,7 @@ def _sgp4_approx(norad_id: int, t_seconds: float) -> Tuple[float, float]:
 async def fetch_iss_position() -> Dict[str, Any]:
     """Fetch live ISS position from wheretheiss.at"""
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             r = await client.get(ISS_POSITION)
             if r.status_code == 200:
                 d = r.json()
@@ -106,9 +106,12 @@ async def fetch_iss_position() -> Dict[str, Any]:
 
 async def fetch_satellite_positions() -> List[Dict[str, Any]]:
     """
-    Return approximate real-time positions for our satellite fleet.
-    ISS is fetched from live API; rest use simplified orbital model.
+    Return real-time positions with realistic battery and storage.
+    Uses real satellite specifications for battery/storage.
+    ISS position from live API; others from orbital model.
     """
+    from satellite_specs import get_satellite_specs, calculate_battery_percentage, calculate_storage_percentage
+    
     t = datetime.now(timezone.utc).timestamp()
     positions = []
 
@@ -116,28 +119,38 @@ async def fetch_satellite_positions() -> List[Dict[str, Any]]:
     iss = await fetch_iss_position()
 
     for sat in REAL_SATELLITES:
+        specs = get_satellite_specs(sat["id"])
+        
         if sat["norad"] == 25544:
+            # ISS - Live position
             positions.append({
                 "id": sat["id"],
+                "name": specs["name"],
                 "position": [iss["lon"], iss["lat"]],
                 "altitude_km": iss.get("altitude_km", 408),
                 "velocity_kmh": iss.get("velocity_kmh", 27600),
-                "role": sat["role"],
-                "battery": round(random.uniform(70, 100), 1),
-                "storage_used": round(random.uniform(10, 60), 1),
+                "role": specs["rl_role"],
+                "purpose": specs["purpose"],
+                "battery": calculate_battery_percentage(sat["norad"], t, specs["battery_capacity_kwh"]),
+                "storage_used": calculate_storage_percentage(),
+                "solar_panels_kw": specs["solar_panels_kw"],
                 "active": True,
                 "tasks_completed": 0,
             })
         else:
+            # Other satellites - Approximate positions
             lon, lat = _sgp4_approx(sat["norad"], t)
             positions.append({
                 "id": sat["id"],
+                "name": specs["name"],
                 "position": [lon, lat],
                 "altitude_km": round(random.uniform(500, 800), 0),
                 "velocity_kmh": round(random.uniform(26000, 28000), 0),
-                "role": sat["role"],
-                "battery": round(random.uniform(60, 100), 1),
-                "storage_used": round(random.uniform(5, 70), 1),
+                "role": specs["rl_role"],
+                "purpose": specs["purpose"],
+                "battery": calculate_battery_percentage(sat["norad"], t, specs["battery_capacity_kwh"]),
+                "storage_used": calculate_storage_percentage(),
+                "solar_panels_kw": specs["solar_panels_kw"],
                 "active": True,
                 "tasks_completed": 0,
             })
@@ -150,7 +163,7 @@ async def fetch_nasa_disasters() -> List[Dict[str, Any]]:
     Returns a list of geolocated events with type, title, coordinates.
     """
     try:
-        async with httpx.AsyncClient(timeout=8.0) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             r = await client.get(NASA_EONET)
             if r.status_code == 200:
                 data = r.json()
@@ -196,7 +209,7 @@ async def fetch_space_weather() -> Dict[str, Any]:
     """
     # Try NOAA space weather
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             r = await client.get("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json")
             if r.status_code == 200:
                 data = r.json()
@@ -227,7 +240,7 @@ async def fetch_space_weather() -> Dict[str, Any]:
 
     # Fallback: Open-Meteo weather code heuristic
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             r = await client.get(OPEN_METEO)
             if r.status_code == 200:
                 data = r.json()
@@ -244,16 +257,37 @@ async def fetch_space_weather() -> Dict[str, Any]:
     return {"condition": "clear", "label": "NOMINAL CONDITIONS", "kp_index": 0.0, "source": "fallback", "timestamp": ""}
 
 
+_LIVE_CACHE = {"data": None, "time": 0, "fetching": False}
+
+async def _bg_fetch():
+    try:
+        sats, disasters, weather = await asyncio.gather(
+            fetch_satellite_positions(),
+            fetch_nasa_disasters(),
+            fetch_space_weather(),
+        )
+        _LIVE_CACHE["data"] = {
+            "satellites": sats,
+            "disasters": disasters,
+            "weather": weather,
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+        }
+        _LIVE_CACHE["time"] = datetime.now(timezone.utc).timestamp()
+    finally:
+        _LIVE_CACHE["fetching"] = False
+
 async def fetch_all_real_data() -> Dict[str, Any]:
-    """Fetch all real-world data in parallel."""
-    sats, disasters, weather = await asyncio.gather(
-        fetch_satellite_positions(),
-        fetch_nasa_disasters(),
-        fetch_space_weather(),
-    )
-    return {
-        "satellites": sats,
-        "disasters": disasters,
-        "weather": weather,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
-    }
+    """Fetch all real-world data safely with background caching."""
+    now = datetime.now(timezone.utc).timestamp()
+    
+    if _LIVE_CACHE["data"] is None and not _LIVE_CACHE["fetching"]:
+        _LIVE_CACHE["fetching"] = True
+        await _bg_fetch()
+        return _LIVE_CACHE["data"]
+
+    # Trigger async background fetch if cache is older than 5 seconds
+    if (now - _LIVE_CACHE["time"]) > 5.0 and not _LIVE_CACHE["fetching"]:
+        _LIVE_CACHE["fetching"] = True
+        asyncio.create_task(_bg_fetch())
+
+    return _LIVE_CACHE["data"]

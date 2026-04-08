@@ -14,6 +14,7 @@ import os
 from env import SatelliteSchedulingEnv
 from graders import grade
 from real_data import fetch_all_real_data, fetch_nasa_disasters, fetch_satellite_positions, fetch_space_weather
+from datetime import datetime, timezone
 
 app = FastAPI(
     title="Satellite Scheduling RL Environment API",
@@ -186,6 +187,54 @@ def run_demo(difficulty: str = "easy", seed: int = 42):
     }
 
 
+@app.get("/real-satellites")
+async def get_real_satellites():
+    """
+    Fetch real satellite positions + disasters + weather from live APIs.
+    Returns frontend-ready data for 3D visualization.
+    """
+    try:
+        all_data = await fetch_all_real_data()
+        
+        # Transform for frontend format
+        satellites = []
+        for sat in all_data.get("satellites", []):
+            satellites.append({
+                "id": sat["id"],
+                "name": sat["id"],
+                "agency": "ISRO/NASA",
+                "purpose": f"Role: {sat['role']}",
+                "launchDate": "Live",
+                "orbitType": "Active",
+                "status": "Active",
+                "orbitRadius": 2.2 + (sat["altitude_km"] / 5000),
+                "orbitSpeed": 1.0,
+                "angleOffset": hash(sat["id"]) % 360,
+                "inclination": 1.5,
+                "color": "#00f0ff" if sat["role"] == "executor" else "#a855f7",
+                "position": sat["position"],
+                "altitude_km": sat["altitude_km"],
+                "battery": sat.get("battery", 80),
+                "storage_used": sat.get("storage_used", 30),
+                "active": sat.get("active", True),
+            })
+        
+        return {
+            "satellites": satellites,
+            "disasters": all_data.get("disasters", []),
+            "weather": all_data.get("weather", {}),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "satellites": [],
+            "disasters": [],
+            "weather": {"condition": "clear", "label": "ERROR - USING FALLBACK"},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+
 @app.get("/validate")
 def validate_environment():
     """
@@ -347,4 +396,15 @@ async def live_weather():
 if os.path.exists("static"):
     # Mount everything else to the React frontend
     app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+
+# ── Server Startup ──────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app,
+        host="127.0.0.1",
+        port=8000,
+        log_level="info",
+    )
 
