@@ -11,9 +11,9 @@ from typing import Optional, Dict, Any
 import uuid
 import os
 
-from env import SatelliteSchedulingEnv
-from graders import grade
-from real_data import fetch_all_real_data, fetch_nasa_disasters, fetch_satellite_positions, fetch_space_weather
+from backend.env import SatelliteSchedulingEnv
+from backend.graders import grade
+from backend.real_data import fetch_all_real_data, fetch_nasa_disasters, fetch_satellite_positions, fetch_space_weather
 from datetime import datetime, timezone
 
 app = FastAPI(
