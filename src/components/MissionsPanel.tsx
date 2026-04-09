@@ -2,7 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Target, CheckCircle2, Clock, AlertTriangle, Zap, RefreshCw, Play, WifiOff } from 'lucide-react';
 
-const API = import.meta.env.MODE === 'production' ? '' : 'http://localhost:8000';
+// Robust dynamic API URL construction for nested iframes (e.g., Hugging Face Spaces)
+const API = import.meta.env.MODE === 'production' 
+  ? (window.location.pathname === '/' ? '' : window.location.pathname.replace(/\/$/, '')) 
+  : (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000');
 
 interface Task {
   id: string;
@@ -53,7 +56,7 @@ export function MissionsPanel({ onClose }: { onClose: () => void }) {
 
   const checkHealth = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/`, { signal: AbortSignal.timeout(5000) });
+      const r = await fetch(`${API}/api/health`, { signal: AbortSignal.timeout(5000) });
       setOnline(r.ok);
     } catch { setOnline(false); }
   }, []);

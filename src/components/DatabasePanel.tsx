@@ -5,9 +5,10 @@ import {
   Trophy, Activity, Cpu, HardDrive, CheckCircle2, Clock,
   BarChart2, Layers
 } from 'lucide-react';
-
-const API = import.meta.env.MODE === 'production' ? '' : 'http://localhost:8000';
-
+// Robust dynamic API URL construction for nested iframes (e.g., Hugging Face Spaces)
+const API = import.meta.env.MODE === 'production' 
+  ? (window.location.pathname === '/' ? '' : window.location.pathname.replace(/\/$/, '')) 
+  : (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000');
 interface Session {
   session_id: string;
   difficulty: string;
@@ -55,7 +56,7 @@ export function DatabasePanel({ onClose }: { onClose: () => void }) {
 
   const checkHealth = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/`, { signal: AbortSignal.timeout(2000) });
+      const r = await fetch(`${API}/api/health`, { signal: AbortSignal.timeout(2000) });
       if (r.ok) {
         const d = await r.json();
         setApiInfo(d);
