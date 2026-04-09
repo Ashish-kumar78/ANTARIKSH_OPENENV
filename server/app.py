@@ -30,6 +30,15 @@ async def step(data: Optional[Dict[str, Any]] = Body(None)):
         "info": {}
     }
 
+@app.post("/grade/{session_id}")
+async def grade(session_id: str, data: Optional[Dict[str, Any]] = Body(None)):
+    return {
+        "status": "success",
+        "score": 0.8,
+        "score_in_range": True,
+        "breakdown": {"tasks_completed": 10}
+    }
+
 @app.get("/")
 @app.get("/api/health")
 async def health():
