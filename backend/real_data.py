@@ -110,7 +110,7 @@ async def fetch_satellite_positions() -> List[Dict[str, Any]]:
     Uses real satellite specifications for battery/storage.
     ISS position from live API; others from orbital model.
     """
-    from satellite_specs import get_satellite_specs, calculate_battery_percentage, calculate_storage_percentage
+    from backend.satellite_specs import get_satellite_specs, calculate_battery_percentage, calculate_storage_percentage
     
     t = datetime.now(timezone.utc).timestamp()
     positions = []
