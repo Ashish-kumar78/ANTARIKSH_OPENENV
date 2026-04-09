@@ -26,8 +26,8 @@ RUN pip install --no-cache-dir -r root_requirements.txt
 
 COPY . .
 
-# Install the project in editable mode for the "start" script to work
-RUN pip install -e .
+# Install uv to resolve nested openenv-core dependencies instantly without backtracking
+RUN pip install uv && uv pip install --system -e .
 
 COPY --from=frontend-builder /app/frontend/dist ./static/
 
